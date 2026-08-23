@@ -10,8 +10,8 @@ from telegram.ext import (
     filters,
 )
 
-TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
-MY_USERNAME = os.getenv("MY_USERNAME", "YOUR_TELEGRAM_USERNAME")
+TOKEN = os.getenv("BOT_TOKEN", "8888249024:AAGmIda-57nIOS5t7YnqJ48NAqJKe4VVpbY")
+MY_USERNAME = os.getenv("MY_USERNAME", "Trade11maneger")
 
 # مراحل المحادثة
 NAME, ID_PHOTOS, PHONE = range(3)
