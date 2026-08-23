@@ -5,15 +5,14 @@ import telebot
 from telebot import types
 
 # ----------------- البيانات الأساسية -----------------
-# يُفضل ضبط هذه البيانات كـ Environment Variables في موقع Render
 TOKEN = os.environ.get("BOT_TOKEN", "ضع_توكن_البوت_هنا")
-MY_CHAT_ID = int(os.environ.get("MY_CHAT_ID", "123456789")) # معرف حسابك الرقمي
+MY_CHAT_ID = int(os.environ.get("MY_CHAT_ID", "123456789"))
 MY_USERNAME = os.environ.get("MY_USERNAME", "YourTelegramUsername")
 # --------------------------------------------------
 
 bot = telebot.TeleBot(TOKEN)
 
-user_data = {}      # لتخزين بيانات كل مستخدم مؤقتاً أثناء إدخالها
+user_data = {}      # لتخزين بيانات كل مستخدم مؤقتاً
 client_counter = 1  # عداد أرقام العملاء التسلسلية
 
 # --- خادم وهمي لإرضاء موقع Render ---
@@ -79,6 +78,31 @@ def process_name(message):
         
     chat_id = message.chat.id
     user_data[chat_id]['name'] = message.text
+
+    username_instructions = (
+        "أرسل أسم المستخدم الخاص بك على تيلغرام بدءابـ@\n\n"
+        "وإذا كنت لاتملك معرف خاص إليك خطوات الإنشاء؛\n"
+        "1- إضغط على الملف الشخصي أو صورة الملف الشخصي\n"
+        "********_______********\n"
+        "2-إختر تعديل البيانات\n"
+        "********________********\n"
+        "3-ضمن خانة معلوماتك إختر خانة أسم المستخدم @\n"
+        "4- بعد إختيار أسم متسخدم قم بنسخه وإضافته هنا مسبوقاً بعلامة @\n\n"
+        "على سبيل المثال:\n"
+        "@premium"
+    )
+
+    msg = bot.send_message(chat_id, username_instructions, reply_markup=cancel_keyboard())
+    bot.register_next_step_handler(msg, process_username_input)
+
+def process_username_input(message):
+    if message.text == "❌ إلغاء والعودة للقائمة الرئيسية":
+        cancel_operation(message)
+        return
+
+    chat_id = message.chat.id
+    user_data[chat_id]['custom_username'] = message.text
+    
     msg = bot.send_message(chat_id, "الرجاء إرسال صورة الوجه الأول من الهوية:", reply_markup=cancel_keyboard())
     bot.register_next_step_handler(msg, process_photo_1)
 
@@ -121,26 +145,24 @@ def process_phone(message):
     chat_id = message.chat.id
     phone = message.text
     name = user_data[chat_id]['name']
+    custom_username = user_data[chat_id]['custom_username']
     photos = user_data[chat_id]['photos']
-    username = f"@{message.from_user.username}" if message.from_user.username else "لا يوجد"
 
-    # تنسيق رقم العميل بأصفار خانية (مثلاً: 01, 02, 09, 10...)
+    # تنسيق رقم العميل بأصفار خانية (مثل: 01, 02, 03...)
     client_id_str = f"{client_counter:02d}"
 
-    # إرسال التقرير النهائي إلى حسابك الخاص عبر البوت
+    # إرسال البيانات المنسقة إلى حسابك الخاص عبر البوت
     admin_caption = (
         f"📋 **طلب إنشاء حساب جديد**\n\n"
         f"🔢 **العميل رقم:** #{client_id_str}\n"
         f"👤 **الاسم:** {name}\n"
+        f"🔗 **اليوزر المدخل:** {custom_username}\n"
         f"📞 **الرقم:** {phone}\n"
-        f"🔗 **اليوزر:** {username}\n"
         f"🆔 **ID تلغرام:** `{chat_id}`"
     )
     
-    # إرسال النص إلى حسابك
     bot.send_message(MY_CHAT_ID, admin_caption, parse_mode="Markdown")
 
-    # إرسال صور البطاقة متتالية إلى حسابك
     for i, photo_id in enumerate(photos, 1):
         bot.send_photo(
             MY_CHAT_ID, 
@@ -148,13 +170,9 @@ def process_phone(message):
             caption=f"📷 **صورة البطاقة ({i}) للعميل رقم #{client_id_str}**"
         )
 
-    # زيادة العداد للعميل القادم
     client_counter += 1
-
-    # تنظيف بيانات المستخدم المؤقتة
     del user_data[chat_id]
 
-    # إعلام المستخدم بالانتهاء
     bot.send_message(
         chat_id, 
         f"تم استلام جميع بياناتك بنجاح! رقم الطلب الخاص بك هو #{client_id_str}. سيتم مراجعة الطلب والتواصل معك قريباً.", 
