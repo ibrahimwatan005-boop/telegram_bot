@@ -4,14 +4,17 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import telebot
 from telebot import types
 
-# ----------------- ضع بياناتك هنا -----------------
-TOKEN ="8888249024:AAGmIda-57nIOS5t7YnqJ48NAqJKe4VVpbY"
-MY_CHAT_ID ="8994512911" 
-MY_USERNAME = "Trade11maneger"
+# ----------------- البيانات الأساسية -----------------
+# يُفضل ضبط هذه البيانات كـ Environment Variables في موقع Render
+TOKEN = os.environ.get("BOT_TOKEN", "ضع_توكن_البوت_هنا")
+MY_CHAT_ID = int(os.environ.get("MY_CHAT_ID", "123456789")) # معرف حسابك الرقمي
+MY_USERNAME = os.environ.get("MY_USERNAME", "YourTelegramUsername")
 # --------------------------------------------------
 
 bot = telebot.TeleBot(TOKEN)
-user_data = {}
+
+user_data = {}      # لتخزين بيانات كل مستخدم مؤقتاً أثناء إدخالها
+client_counter = 1  # عداد أرقام العملاء التسلسلية
 
 # --- خادم وهمي لإرضاء موقع Render ---
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
@@ -25,7 +28,7 @@ def run_dummy_server():
     server = HTTPServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
     server.serve_forever()
 
-# ----------------- قائمة الأزرار الرئيسية -----------------
+# ----------------- قوائم الأزرار -----------------
 def main_keyboard():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton("1. إنشاء حساب")
@@ -33,6 +36,20 @@ def main_keyboard():
     btn3 = types.KeyboardButton("3. خدمة العملاء")
     markup.add(btn1, btn2, btn3)
     return markup
+
+def cancel_keyboard():
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    btn_cancel = types.KeyboardButton("❌ إلغاء والعودة للقائمة الرئيسية")
+    markup.add(btn_cancel)
+    return markup
+
+# ----------------- إلغاء العملية -----------------
+@bot.message_handler(func=lambda msg: msg.text == "❌ إلغاء والعودة للقائمة الرئيسية")
+def cancel_operation(message):
+    chat_id = message.chat.id
+    if chat_id in user_data:
+        del user_data[chat_id]
+    bot.send_message(chat_id, "تم إلغاء العملية والعودة للقائمة الرئيسية.", reply_markup=main_keyboard())
 
 # ----------------- أمر البداية /start -----------------
 @bot.message_handler(commands=['start'])
@@ -48,54 +65,101 @@ def send_welcome(message):
 def start_registration(message):
     chat_id = message.chat.id
     user_data[chat_id] = {'photos': []}
-    msg = bot.send_message(chat_id, "يرجى إدخال الاسم الثلاثي:", reply_markup=types.ReplyKeyboardRemove())
+    msg = bot.send_message(
+        chat_id, 
+        "يرجى إدخال الاسم الثلاثي:", 
+        reply_markup=cancel_keyboard()
+    )
     bot.register_next_step_handler(msg, process_name)
 
 def process_name(message):
+    if message.text == "❌ إلغاء والعودة للقائمة الرئيسية":
+        cancel_operation(message)
+        return
+        
     chat_id = message.chat.id
     user_data[chat_id]['name'] = message.text
-    msg = bot.send_message(chat_id, "الرجاء إرسال صورة الوجه الأول من الهوية:")
+    msg = bot.send_message(chat_id, "الرجاء إرسال صورة الوجه الأول من الهوية:", reply_markup=cancel_keyboard())
     bot.register_next_step_handler(msg, process_photo_1)
 
 def process_photo_1(message):
+    if message.text == "❌ إلغاء والعودة للقائمة الرئيسية":
+        cancel_operation(message)
+        return
+
     chat_id = message.chat.id
     if not message.photo:
-        msg = bot.send_message(chat_id, "يرجى إرسال صورة حقيقية للهوية:")
+        msg = bot.send_message(chat_id, "⚠️ يرجى إرسال صورة حقيقية للهوية (صورة فقط):", reply_markup=cancel_keyboard())
         bot.register_next_step_handler(msg, process_photo_1)
         return
+
     user_data[chat_id]['photos'].append(message.photo[-1].file_id)
-    msg = bot.send_message(chat_id, "تم استلام الصورة الأولى. الآن أرسل صورة الوجه الثاني للهوية:")
+    msg = bot.send_message(chat_id, "تم استلام الصورة الأولى. الآن أرسل صورة الوجه الثاني للهوية:", reply_markup=cancel_keyboard())
     bot.register_next_step_handler(msg, process_photo_2)
 
 def process_photo_2(message):
+    if message.text == "❌ إلغاء والعودة للقائمة الرئيسية":
+        cancel_operation(message)
+        return
+
     chat_id = message.chat.id
     if not message.photo:
-        msg = bot.send_message(chat_id, "يرجى إرسال صورة حقيقية للهوية:")
+        msg = bot.send_message(chat_id, "⚠️ يرجى إرسال صورة حقيقية للهوية (صورة فقط):", reply_markup=cancel_keyboard())
         bot.register_next_step_handler(msg, process_photo_2)
         return
+
     user_data[chat_id]['photos'].append(message.photo[-1].file_id)
-    msg = bot.send_message(chat_id, "تم استلام صور الهوية. أرسل رقم هاتفك الآن:")
+    msg = bot.send_message(chat_id, "تم استلام صور الهوية. أرسل رقم هاتفك الآن:", reply_markup=cancel_keyboard())
     bot.register_next_step_handler(msg, process_phone)
 
 def process_phone(message):
+    global client_counter
+    if message.text == "❌ إلغاء والعودة للقائمة الرئيسية":
+        cancel_operation(message)
+        return
+
     chat_id = message.chat.id
     phone = message.text
     name = user_data[chat_id]['name']
     photos = user_data[chat_id]['photos']
-    username = message.from_user.username or "لا يوجد"
+    username = f"@{message.from_user.username}" if message.from_user.username else "لا يوجد"
 
-    bot.send_message(
-        MY_CHAT_ID, 
-        f"📥 **طلب إنشاء حساب جديد**\n\n"
-        f"👤 الاسم الثلاثي: {name}\n"
-        f"📞 رقم الهاتف: {phone}\n"
-        f"🔗 يوزر المستخدم: @{username}\n"
-        f"🆔 ID المستخدم: {chat_id}"
+    # تنسيق رقم العميل بأصفار خانية (مثلاً: 01, 02, 09, 10...)
+    client_id_str = f"{client_counter:02d}"
+
+    # إرسال التقرير النهائي إلى حسابك الخاص عبر البوت
+    admin_caption = (
+        f"📋 **طلب إنشاء حساب جديد**\n\n"
+        f"🔢 **العميل رقم:** #{client_id_str}\n"
+        f"👤 **الاسم:** {name}\n"
+        f"📞 **الرقم:** {phone}\n"
+        f"🔗 **اليوزر:** {username}\n"
+        f"🆔 **ID تلغرام:** `{chat_id}`"
     )
-    for photo_id in photos:
-        bot.send_photo(MY_CHAT_ID, photo_id)
+    
+    # إرسال النص إلى حسابك
+    bot.send_message(MY_CHAT_ID, admin_caption, parse_mode="Markdown")
 
-    bot.send_message(chat_id, "تم استلام جميع بياناتك بنجاح! سيتم مراجعتها قريباً.", reply_markup=main_keyboard())
+    # إرسال صور البطاقة متتالية إلى حسابك
+    for i, photo_id in enumerate(photos, 1):
+        bot.send_photo(
+            MY_CHAT_ID, 
+            photo_id, 
+            caption=f"📷 **صورة البطاقة ({i}) للعميل رقم #{client_id_str}**"
+        )
+
+    # زيادة العداد للعميل القادم
+    client_counter += 1
+
+    # تنظيف بيانات المستخدم المؤقتة
+    del user_data[chat_id]
+
+    # إعلام المستخدم بالانتهاء
+    bot.send_message(
+        chat_id, 
+        f"تم استلام جميع بياناتك بنجاح! رقم الطلب الخاص بك هو #{client_id_str}. سيتم مراجعة الطلب والتواصل معك قريباً.", 
+        reply_markup=main_keyboard()
+    )
 
 # ----------------- 2. مسار السحب والإيداع -----------------
 @bot.message_handler(func=lambda msg: msg.text == "2. السحب والإيداع")
@@ -109,25 +173,35 @@ def withdraw_deposit_menu(message):
 @bot.callback_query_handler(func=lambda call: call.data == "deposit")
 def process_deposit_click(call):
     bot.answer_callback_query(call.id)
-    msg = bot.send_message(call.message.chat.id, "أرسل عنوانك الخاص (سواءً كان نصاً أو صورة):")
+    msg = bot.send_message(
+        call.message.chat.id, 
+        "أرسل عنوانك الخاص (سواءً كان نصاً أو صورة):", 
+        reply_markup=cancel_keyboard()
+    )
     bot.register_next_step_handler(msg, process_deposit_submission)
 
 def process_deposit_submission(message):
+    if message.text == "❌ إلغاء والعودة للقائمة الرئيسية":
+        cancel_operation(message)
+        return
+
     chat_id = message.chat.id
-    username = message.from_user.username or "لا يوجد"
+    username = f"@{message.from_user.username}" if message.from_user.username else "لا يوجد"
+    
     bot.send_message(chat_id, "تم استلام طلبك وتحويله للقسم المختص.", reply_markup=main_keyboard())
 
     bot.send_message(
         MY_CHAT_ID, 
         f"💰 **طلب إيداع جديد**\n"
-        f"من المستخدم: @{username}\n"
-        f"نص الرسالة: \"اريد ان اضع اموال\""
+        f"👤 من المستخدم: {username}\n"
+        f"🆔 ID: `{chat_id}`",
+        parse_mode="Markdown"
     )
 
     if message.photo:
-        bot.send_photo(MY_CHAT_ID, message.photo[-1].file_id)
+        bot.send_photo(MY_CHAT_ID, message.photo[-1].file_id, caption="صورة الإيداع المرسلة")
     elif message.text:
-        bot.send_message(MY_CHAT_ID, f"العنوان المرسل:\n{message.text}")
+        bot.send_message(MY_CHAT_ID, f"📝 التفاصيل / العنوان:\n{message.text}")
 
 # ----------------- 3. مسار خدمة العملاء -----------------
 @bot.message_handler(func=lambda msg: msg.text == "3. خدمة العملاء")
