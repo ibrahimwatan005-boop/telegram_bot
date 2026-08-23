@@ -151,7 +151,7 @@ async def main_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == '__main__':
     app = ApplicationBuilder().token(TOKEN).build()
 
-conv_handler = ConversationHandler(
+    conv_handler = ConversationHandler(
         entry_points=[MessageHandler(filters.Regex('إنشاء حساب'), start_register)],
         states={
             NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
@@ -160,12 +160,13 @@ conv_handler = ConversationHandler(
         },
         fallbacks=[CommandHandler('cancel', cancel)]
     )
+
     app.add_handler(CommandHandler('start', start))
     app.add_handler(conv_handler)
-   app.add_handler(MessageHandler(filters.Regex('السحب والإيداع'), withdraw_deposit_menu))
-   app.add_handler(MessageHandler(filters.Regex('خدمة العملاء'), customer_service))
+    app.add_handler(MessageHandler(filters.Regex('السحب والإيداع'), withdraw_deposit_menu))
+    app.add_handler(MessageHandler(filters.Regex('خدمة العملاء'), customer_service))
     app.add_handler(MessageHandler(filters.Regex('القائمة الرئيسية'), main_menu_handler))
-  app.add_handler(MessageHandler((filters.TEXT | filters.PHOTO) & ~filters.COMMAND, handle_deposit_submission))
+    app.add_handler(MessageHandler((filters.TEXT | filters.PHOTO) & ~filters.COMMAND, handle_deposit_submission))
 
     print("البوت يعمل الآن...")
     app.run_polling()
