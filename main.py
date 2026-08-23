@@ -148,12 +148,13 @@ async def customer_service(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ])
     await update.message.reply_text("للتحويل المباشر إلى خدمة العملاء اضغط على الزر أدناه:", reply_markup=support_keyboard)
 async def main_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("أهلاً بك في القائمة الرئيسية:", reply_markup=main_menu_keyboard())
+    await update.message.reply_text("WELCOME", reply_markup=main_menu_keyboard())
 # ----------------- التشغيل الرئيسي -----------------
 if __name__ == '__main__':
     app = ApplicationBuilder().token(TOKEN).build()
 
-    entry_points=[MessageHandler(filters.Regex('إنشاء حساب'), start_register)],
+conv_handler = ConversationHandler(
+        entry_points=[MessageHandler(filters.Regex('إنشاء حساب'), start_register)],
         states={
             NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
             ID_PHOTOS: [MessageHandler(filters.PHOTO, get_id_photos)],
@@ -161,7 +162,6 @@ if __name__ == '__main__':
         },
         fallbacks=[CommandHandler('cancel', cancel)]
     )
-
     app.add_handler(CommandHandler('start', start))
     app.add_handler(conv_handler)
    app.add_handler(MessageHandler(filters.Regex('السحب والإيداع'), withdraw_deposit_menu))
