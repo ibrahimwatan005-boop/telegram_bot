@@ -35,17 +35,15 @@ NAME, ID_PHOTOS, PHONE = range(3)
 # لوحة الأزرار الرئيسية
 def main_menu_keyboard():
     keyboard = [
-        ["القائمة الرئيسية"]و
+        ["القائمة الرئيسية"],
         ["1. إنشاء حساب"],
-        ["2. السحب والإيداع"],
-        ["3. خدمة العملاء"]
+        ["2. السحب والإيداع", "3. خدمة العملاء"]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-
 # أزرار السحب والإيداع
 def deposit_withdraw_keyboard():
     keyboard = [
-        [InlineKeyboardButton("سحب", url=f"https://t.me/{MY_USERNAME}?text=اريد%20ان%20أسحب%20أموال")],
+        [InlineKeyboardButton("سحب", url=f"https://t.me/{MY_USERNAME}")],
         [InlineKeyboardButton("إيداع", callback_data="deposit")]
     ]
     return InlineKeyboardMarkup(keyboard)
