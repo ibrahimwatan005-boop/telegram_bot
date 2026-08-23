@@ -35,6 +35,7 @@ NAME, ID_PHOTOS, PHONE = range(3)
 # لوحة الأزرار الرئيسية
 def main_menu_keyboard():
     keyboard = [
+        ["القائمة الرئيسية"]و
         ["1. إنشاء حساب"],
         ["2. السحب والإيداع"],
         ["3. خدمة العملاء"]
@@ -67,7 +68,7 @@ async def start_register(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['full_name'] = update.message.text
-    await update.message.reply_text("الرجاء إرسال صور الهوية (الوجه والقفا):")
+    await update.message.reply_text("الرجاء إرسال صور الهوية (الأمامي والخلفي):")
     return ID_PHOTOS
 
 async def get_id_photos(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -146,13 +147,13 @@ async def customer_service(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("التواصل مع الدعم", url=f"https://t.me/{MY_USERNAME}")]
     ])
     await update.message.reply_text("للتحويل المباشر إلى خدمة العملاء اضغط على الزر أدناه:", reply_markup=support_keyboard)
-
+async def main_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("أهلاً بك في القائمة الرئيسية:", reply_markup=main_menu_keyboard())
 # ----------------- التشغيل الرئيسي -----------------
 if __name__ == '__main__':
     app = ApplicationBuilder().token(TOKEN).build()
 
-    conv_handler = ConversationHandler(
-        entry_points=[MessageHandler(filters.Regex('^1\. إنشاء حساب$'), start_register)],
+    entry_points=[MessageHandler(filters.Regex('إنشاء حساب'), start_register)],
         states={
             NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
             ID_PHOTOS: [MessageHandler(filters.PHOTO, get_id_photos)],
@@ -163,10 +164,10 @@ if __name__ == '__main__':
 
     app.add_handler(CommandHandler('start', start))
     app.add_handler(conv_handler)
-    app.add_handler(MessageHandler(filters.Regex('^2\. السحب والإيداع$'), withdraw_deposit_menu))
-    app.add_handler(MessageHandler(filters.Regex('^3\. خدمة العملاء$'), customer_service))
-    app.add_handler(CallbackQueryHandler(handle_deposit_click, pattern='^deposit$'))
-    app.add_handler(MessageHandler((filters.TEXT | filters.PHOTO) & ~filters.COMMAND, handle_deposit_submission))
+   app.add_handler(MessageHandler(filters.Regex('السحب والإيداع'), withdraw_deposit_menu))
+   app.add_handler(MessageHandler(filters.Regex('خدمة العملاء'), customer_service))
+    app.add_handler(MessageHandler(filters.Regex('القائمة الرئيسية'), main_menu_handler))
+  app.add_handler(MessageHandler((filters.TEXT | filters.PHOTO) & ~filters.COMMAND, handle_deposit_submission))
 
     print("البوت يعمل الآن...")
     app.run_polling()
