@@ -163,7 +163,7 @@ def process_phone(message):
 
     client_id_str = f"{client_counter:02d}"
 
-    # تنظيف المعرف لاستخدامه في رابط التواصل المباشر
+    # تنظيف معرف المستخدم أياً كانت طريق كتابته (إزالة الرموز الزائدة)
     clean_username = custom_username.replace("@", "").strip()
 
     admin_caption = (
@@ -175,17 +175,16 @@ def process_phone(message):
         f"🆔 ID تلغرام: `{chat_id}`"
     )
     
-    # إنشاء زر مراسلة العميل المباشر
-    admin_markup = types.InlineKeyboardMarkup()
+    # توفير زارين: زر المباشر عبر اليوزر المنظف، وزر مباشر عبر الـ ID الرقمي لضمان عدم حدوث خطأ نهائياً
+    admin_markup = types.InlineKeyboardMarkup(row_width=1)
     if clean_username and clean_username != "غير محدد":
-        btn_contact = types.InlineKeyboardButton("💬 مراسلة العميل مباشرة", url=f"https://t.me/{clean_username}")
-        admin_markup.add(btn_contact)
-    else:
-        btn_contact = types.InlineKeyboardButton("💬 فتح محادثة عبر ID", url=f"tg://user?id={chat_id}")
-        admin_markup.add(btn_contact)
+        btn_username = types.InlineKeyboardButton("💬 مراسلة عبر المعرف", url=f"https://t.me/{clean_username}")
+        admin_markup.add(btn_username)
+    
+    btn_id_chat = types.InlineKeyboardButton("💬 مراسلة مباشرة (عبر الـ ID)", url=f"tg://user?id={chat_id}")
+    admin_markup.add(btn_id_chat)
 
     try:
-        # إرسال التفاصيل للأدمن مع زر التواصل المباشر
         bot.send_message(MY_CHAT_ID, admin_caption, reply_markup=admin_markup, parse_mode="Markdown")
 
         for i, photo_id in enumerate(photos, 1):
@@ -265,13 +264,13 @@ def process_deposit_submission(message):
     
     bot.send_message(chat_id, "تم استلام طلبك وتحويله للقسم المختص.", reply_markup=main_keyboard())
 
-    # زر التواصل مع صاحب الإيداع
-    admin_markup = types.InlineKeyboardMarkup()
+    admin_markup = types.InlineKeyboardMarkup(row_width=1)
     if user_obj.username:
-        btn_contact = types.InlineKeyboardButton("💬 مراسلة العميل مباشرة", url=f"https://t.me/{user_obj.username}")
-    else:
-        btn_contact = types.InlineKeyboardButton("💬 فتح محادثة عبر ID", url=f"tg://user?id={chat_id}")
-    admin_markup.add(btn_contact)
+        btn_username = types.InlineKeyboardButton("💬 مراسلة عبر المعرف", url=f"https://t.me/{user_obj.username}")
+        admin_markup.add(btn_username)
+    
+    btn_id_chat = types.InlineKeyboardButton("💬 مراسلة مباشرة (عبر الـ ID)", url=f"tg://user?id={chat_id}")
+    admin_markup.add(btn_id_chat)
 
     bot.send_message(
         MY_CHAT_ID, 
