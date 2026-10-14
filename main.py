@@ -1,5 +1,6 @@
 import os
 import threading
+import time
 import urllib.parse
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import telebot
@@ -151,8 +152,6 @@ def process_phone(message):
         return
 
     chat_id = message.chat.id
-    
-    # التأكد من وجود البيانات وتجنب الأخطاء عند فقدان الجلسة
     if chat_id not in user_data:
         bot.send_message(chat_id, "حدث خطأ في الجلسة، يرجى المحاولة مرة أخرى من القائمة الرئيسية.", reply_markup=main_keyboard())
         return
@@ -164,7 +163,6 @@ def process_phone(message):
 
     client_id_str = f"{client_counter:02d}"
 
-    # نص كابشن المسؤول - تم تصحيح تنسيق Markdown لضمان الاستجابة
     admin_caption = (
         f"📋 طلب إنشاء حساب جديد\n\n"
         f"🔢 العميل رقم: #{client_id_str}\n"
@@ -175,7 +173,6 @@ def process_phone(message):
     )
     
     try:
-        # إرسال البيانات إلى الأدمن
         bot.send_message(MY_CHAT_ID, admin_caption)
 
         for i, photo_id in enumerate(photos, 1):
@@ -186,12 +183,9 @@ def process_phone(message):
             )
 
         client_counter += 1
-        
-        # حذف بيانات المستخدم المؤقتة
         if chat_id in user_data:
             del user_data[chat_id]
 
-        # الرد على العميل بالتأكيد
         bot.send_message(
             chat_id, 
             f"تم استلام جميع بياناتك بنجاح!\nرقم الطلب الخاص بك هو: #{client_id_str}\nسيتم مراجعة الطلب والتواصل معك قريباً.", 
@@ -278,8 +272,25 @@ def customer_service(message):
     markup.add(btn_cs)
     bot.send_message(message.chat.id, "للتحويل المباشر إلى خدمة العملاء اضغط على الزر أدناه:", reply_markup=markup)
 
-# ----------------- تشغيل الخادم الوهمي والبوت -----------------
+# ----------------- تشغيل الخادم الوهمي والبوت (مع حل جذري لتعارض 409) -----------------
 if __name__ == '__main__':
+    # تشغيل الخادم الوهمي في الخلفية
     threading.Thread(target=run_dummy_server, daemon=True).start()
-    print("البوت يعمل الآن...")
-    bot.infinity_polling()
+    print("الخادم الوهمي يعمل بنجاح...")
+    
+    # محاولة تنظيف الـ Webhook القديم وإيقاف أي جلسات معلقة تماماً
+    try:
+        bot.remove_webhook()
+        time.sleep(1)
+    except Exception as e:
+        print(f"Webhook reset note: {e}")
+
+    print("البوت يعمل الآن ويتستقبل الطلبات...")
+    
+    # التشغيل الحذر مع تخطي التحديثات العالقة لمنع أخطاء التداخل
+    while True:
+        try:
+            bot.infinity_polling(timeout=60, long_polling_timeout=60, skip_pending=True)
+        except Exception as e:
+            print(f"Polling error occurred: {e}")
+            time.sleep(5)  # انتظار 5 ثوانٍ وإعادة المحاولة تلقائياً دون توقف السيرفر
