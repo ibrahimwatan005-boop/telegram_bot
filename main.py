@@ -151,40 +151,55 @@ def process_phone(message):
         return
 
     chat_id = message.chat.id
+    
+    # التأكد من وجود البيانات وتجنب الأخطاء عند فقدان الجلسة
+    if chat_id not in user_data:
+        bot.send_message(chat_id, "حدث خطأ في الجلسة، يرجى المحاولة مرة أخرى من القائمة الرئيسية.", reply_markup=main_keyboard())
+        return
+
     phone = message.text
-    name = user_data[chat_id]['name']
-    custom_username = user_data[chat_id]['custom_username']
-    photos = user_data[chat_id]['photos']
+    name = user_data[chat_id].get('name', 'غير محدد')
+    custom_username = user_data[chat_id].get('custom_username', 'غير محدد')
+    photos = user_data[chat_id].get('photos', [])
 
     client_id_str = f"{client_counter:02d}"
 
+    # نص كابشن المسؤول - تم تصحيح تنسيق Markdown لضمان الاستجابة
     admin_caption = (
-        f"📋 **طلب إنشاء حساب جديد**\n\n"
-        f"🔢 **العميل رقم:** `#{client_id_str}`\n"
-        f"👤 **الاسم الثلاثي:** `{name}`\n"
-        f"🔗 **معرف التلغرام:** `{custom_username}`\n"
-        f"📞 **رقم الهاتف:** `{phone}`\n"
-        f"🆔 **ID تلغرام:** `{chat_id}`"
+        f"📋 طلب إنشاء حساب جديد\n\n"
+        f"🔢 العميل رقم: #{client_id_str}\n"
+        f"👤 الاسم الثلاثي: {name}\n"
+        f"🔗 معرف التلغرام: {custom_username}\n"
+        f"📞 رقم الهاتف: {phone}\n"
+        f"🆔 ID تلغرام: {chat_id}"
     )
     
-    bot.send_message(MY_CHAT_ID, admin_caption, parse_mode="Markdown")
+    try:
+        # إرسال البيانات إلى الأدمن
+        bot.send_message(MY_CHAT_ID, admin_caption)
 
-    for i, photo_id in enumerate(photos, 1):
-        bot.send_photo(
-            MY_CHAT_ID, 
-            photo_id, 
-            caption=f"📷 **صورة الهوية ({i}) للعميل رقم #{client_id_str}**"
+        for i, photo_id in enumerate(photos, 1):
+            bot.send_photo(
+                MY_CHAT_ID, 
+                photo_id, 
+                caption=f"📷 صورة الهوية ({i}) للعميل رقم #{client_id_str}"
+            )
+
+        client_counter += 1
+        
+        # حذف بيانات المستخدم المؤقتة
+        if chat_id in user_data:
+            del user_data[chat_id]
+
+        # الرد على العميل بالتأكيد
+        bot.send_message(
+            chat_id, 
+            f"تم استلام جميع بياناتك بنجاح!\nرقم الطلب الخاص بك هو: #{client_id_str}\nسيتم مراجعة الطلب والتواصل معك قريباً.", 
+            reply_markup=main_keyboard()
         )
-
-    client_counter += 1
-    del user_data[chat_id]
-
-    bot.send_message(
-        chat_id, 
-        f"تم استلام جميع بياناتك بنجاح! رقم الطلب الخاص بك هو `{client_id_str}`. سيتم مراجعة الطلب والتواصل معك قريباً.", 
-        parse_mode="Markdown",
-        reply_markup=main_keyboard()
-    )
+    except Exception as e:
+        print(f"Error sending registration to admin: {e}")
+        bot.send_message(chat_id, "حدث خطأ أثناء إرسال البيانات، يرجى المحاولة لاحقاً.", reply_markup=main_keyboard())
 
 # ----------------- 2. مسار السحب والإيداع -----------------
 @bot.message_handler(func=lambda msg: msg.text == "2. السحب والإيداع")
