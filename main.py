@@ -6,9 +6,9 @@ import telebot
 from telebot import types
 
 # ----------------- البيانات الأساسية -----------------
-TOKEN = os.environ.get("BOT_TOKEN", "ضع_توكن_البوت_هنا")
-MY_CHAT_ID = int(os.environ.get("MY_CHAT_ID", "123456789"))
-MY_USERNAME = os.environ.get("MY_USERNAME", "YourTelegramUsername")
+TOKEN = os.environ.get("BOT_TOKEN", "8758404259:AAHFaIYIJ-aDmGMiERTzgJmi0UYrhzl1qGk")
+MY_CHAT_ID = int(os.environ.get("MY_CHAT_ID", "8994512911"))
+MY_USERNAME = os.environ.get("MY_USERNAME", "AFXM1")
 # --------------------------------------------------
 
 bot = telebot.TeleBot(TOKEN)
@@ -54,9 +54,16 @@ def cancel_operation(message):
 # ----------------- أمر البداية /start -----------------
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
+    welcome_text = (
+        "اهلا بكم في العالمية القابضة\n"
+        "يمكنك من خلال هذا البوت :\n"
+        "1 - إنشاء حساب\n"
+        "2 - إضافة/سحب أموال\n"
+        "3 - التواصل مع خدمة العملاء"
+    )
     bot.send_message(
         message.chat.id, 
-        "أهلاً بك! يرجى اختيار الخدمة المطلوبة من القائمة أدناه:", 
+        welcome_text, 
         reply_markup=main_keyboard()
     )
 
@@ -194,7 +201,6 @@ def process_deposit_click(call):
     bot.answer_callback_query(call.id)
     chat_id = call.message.chat.id
 
-    # نص المحفظة مع التنويه والعنوان القابل للنسخ
     deposit_text = (
         "⚠️ **تنويه: الشبكة حصراً TRC20**\n\n"
         "📌 **تعليمات الإيداع:**\n\n"
@@ -204,7 +210,6 @@ def process_deposit_click(call):
         "بعد إتمام التحويل، أرسل إشعار التحويل أو العنوان الخاص بك هنا (كنص أو صورة):"
     )
 
-    # تحديد المسار المطلق لصورة qr.jpg في مجلد المشروع
     base_dir = os.path.dirname(os.path.abspath(__file__))
     qr_file_path = os.path.join(base_dir, "qr.jpg")
     
