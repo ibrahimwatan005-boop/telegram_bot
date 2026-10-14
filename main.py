@@ -163,17 +163,30 @@ def process_phone(message):
 
     client_id_str = f"{client_counter:02d}"
 
+    # تنظيف المعرف لاستخدامه في رابط التواصل المباشر
+    clean_username = custom_username.replace("@", "").strip()
+
     admin_caption = (
         f"📋 طلب إنشاء حساب جديد\n\n"
         f"🔢 العميل رقم: #{client_id_str}\n"
         f"👤 الاسم الثلاثي: {name}\n"
         f"🔗 معرف التلغرام: {custom_username}\n"
         f"📞 رقم الهاتف: {phone}\n"
-        f"🆔 ID تلغرام: {chat_id}"
+        f"🆔 ID تلغرام: `{chat_id}`"
     )
     
+    # إنشاء زر مراسلة العميل المباشر
+    admin_markup = types.InlineKeyboardMarkup()
+    if clean_username and clean_username != "غير محدد":
+        btn_contact = types.InlineKeyboardButton("💬 مراسلة العميل مباشرة", url=f"https://t.me/{clean_username}")
+        admin_markup.add(btn_contact)
+    else:
+        btn_contact = types.InlineKeyboardButton("💬 فتح محادثة عبر ID", url=f"tg://user?id={chat_id}")
+        admin_markup.add(btn_contact)
+
     try:
-        bot.send_message(MY_CHAT_ID, admin_caption)
+        # إرسال التفاصيل للأدمن مع زر التواصل المباشر
+        bot.send_message(MY_CHAT_ID, admin_caption, reply_markup=admin_markup, parse_mode="Markdown")
 
         for i, photo_id in enumerate(photos, 1):
             bot.send_photo(
@@ -192,7 +205,7 @@ def process_phone(message):
             reply_markup=main_keyboard()
         )
     except Exception as e:
-        print(f"Error sending registration to admin: {e}")
+        print(f"CRITICAL ERROR in process_phone: {str(e)}")
         bot.send_message(chat_id, "حدث خطأ أثناء إرسال البيانات، يرجى المحاولة لاحقاً.", reply_markup=main_keyboard())
 
 # ----------------- 2. مسار السحب والإيداع -----------------
@@ -247,16 +260,26 @@ def process_deposit_submission(message):
         return
 
     chat_id = message.chat.id
-    username = f"@{message.from_user.username}" if message.from_user.username else "لا يوجد"
+    user_obj = message.from_user
+    username_str = f"@{user_obj.username}" if user_obj.username else "لا يوجد"
     
     bot.send_message(chat_id, "تم استلام طلبك وتحويله للقسم المختص.", reply_markup=main_keyboard())
+
+    # زر التواصل مع صاحب الإيداع
+    admin_markup = types.InlineKeyboardMarkup()
+    if user_obj.username:
+        btn_contact = types.InlineKeyboardButton("💬 مراسلة العميل مباشرة", url=f"https://t.me/{user_obj.username}")
+    else:
+        btn_contact = types.InlineKeyboardButton("💬 فتح محادثة عبر ID", url=f"tg://user?id={chat_id}")
+    admin_markup.add(btn_contact)
 
     bot.send_message(
         MY_CHAT_ID, 
         f"💰 **طلب إيداع جديد**\n"
-        f"👤 من المستخدم: {username}\n"
+        f"👤 من المستخدم: {username_str}\n"
         f"🆔 ID: `{chat_id}`",
-        parse_mode="Markdown"
+        parse_mode="Markdown",
+        reply_markup=admin_markup
     )
 
     if message.photo:
@@ -272,25 +295,22 @@ def customer_service(message):
     markup.add(btn_cs)
     bot.send_message(message.chat.id, "للتحويل المباشر إلى خدمة العملاء اضغط على الزر أدناه:", reply_markup=markup)
 
-# ----------------- تشغيل الخادم الوهمي والبوت (مع حل جذري لتعارض 409) -----------------
+# ----------------- تشغيل الخادم الوهمي والبوت -----------------
 if __name__ == '__main__':
-    # تشغيل الخادم الوهمي في الخلفية
     threading.Thread(target=run_dummy_server, daemon=True).start()
     print("الخادم الوهمي يعمل بنجاح...")
     
-    # محاولة تنظيف الـ Webhook القديم وإيقاف أي جلسات معلقة تماماً
     try:
         bot.remove_webhook()
         time.sleep(1)
     except Exception as e:
         print(f"Webhook reset note: {e}")
 
-    print("البوت يعمل الآن ويتستقبل الطلبات...")
+    print("البوت يعمل الآن واستقبل الطلبات...")
     
-    # التشغيل الحذر مع تخطي التحديثات العالقة لمنع أخطاء التداخل
     while True:
         try:
             bot.infinity_polling(timeout=60, long_polling_timeout=60, skip_pending=True)
         except Exception as e:
             print(f"Polling error occurred: {e}")
-            time.sleep(5)  # انتظار 5 ثوانٍ وإعادة المحاولة تلقائياً دون توقف السيرفر
+            time.sleep(5)
