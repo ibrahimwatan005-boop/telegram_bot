@@ -7,7 +7,7 @@ import telebot
 from telebot import types
 
 # ----------------- البيانات الأساسية -----------------
-TOKEN = os.environ.get("BOT_TOKEN", "8758404259:AAHFaIYIJ-aDmGMiERTzgJmi0UYrhzl1qGk")
+TOKEN = os.environ.get("BOT_TOKEN", "8821853932:AAFIiORf0L93bKo1w81UvQUuyDj59ZFjDgY")
 MY_CHAT_ID = int(os.environ.get("MY_CHAT_ID", "8994512911"))
 MY_USERNAME = os.environ.get("MY_USERNAME", "AFXM1")
 # --------------------------------------------------
